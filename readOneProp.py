@@ -56,6 +56,17 @@ Result:
 
 
 def diagonal_masks(N, nnum):
+    """ makes scipy masks, that give submatrices of density matrix,
+corresponding to the each possible triple of the l, j, mj values.
+Arguments:
+    N -- size of the density matrix.
+    nnum -- sequence of basis function numbers for given l values i.e.
+    nnum[0] -- number of s basis functions, nnum[1] number of p basis functions,
+
+Output:
+    dictionary res[(l,j)] = mask, where l and j is the quantum numbers
+    and mask is the mask"""
+
     res = {}
     for i, n, l, j, mj in thr_q_num(N, nnum):
         if (l, j, mj) not in res.keys():
