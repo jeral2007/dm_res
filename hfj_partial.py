@@ -1,13 +1,13 @@
 import source_hfd_python.hfd_dat as hfd
 import source_hfd_python.hfd_in_out as hinout
 import scipy as sc
-from scipy.linalg import inv
+from scipy.linalg import inv, sqrtm
 
 
 def eval_dm():
     import subprocess as sp
     sp.call(['hfj-dft.exe'])
-
+    basis = hfd.Hfj('HFJ_basis.DAT')
 
 class Evaluator(object):
     def __init__(self, rc, hfj):
@@ -19,14 +19,21 @@ class Evaluator(object):
             return sc.trapz(a[:self.nc]*b[:self.nc]*self.wh)
 
     def get_dm_block(self, fis, bfis, qfracs):
-        fvals = [q*self.hfj.getorb_by_number(fi)[0] for q, fi in zip(qfracs,
-                                                                     fis)]
+        fvals = [self.hfj.getorb_by_number(fi)[0] for fi in fis]
         bfvals = [self.hfj.getorb_by_number(fi)[0] for fi in bfis]
-        norms = [self.orb_dot(orb, orb) for orb in bfvals]
-        smati = inv([[self.orb_dot(f2, f1) for f1 in bfvals] for f2 in bfvals])
-        dots_vec = [sum(self.orb_dot(bf, f) for f in fvals) for bf in bfvals]
-        coefs = sc.dot(smati, dots_vec)
-        return sc.outer(coefs, coefs)
+        norms = [self.h
+        smat = sc.array([[self.orb_dot(f2, f1)/self.orb_dot( for f1 in bfvals] for f2 in bfvals])
+        smat
+        smati =
+        #smati = sqrtm(inv(smat))
+        #smati = sc.eye(smat.shape[0],smat.shape[1])
+        def aux(orb, basis):
+            #  prepare matrix for orb
+            cf = sc.dot(smati, [self.orb_dot(orb, b) for b in basis])
+            return sc.outer(cf, cf)
+
+        return sum(q*aux(f, bfvals) for q, f in zip(qfracs, fvals))
+
 test = hfd.Hfj('HFJ.DAT')
 
 
@@ -44,7 +51,7 @@ for ni in xrange(1, 13):
 sc.savetxt('test.out', r_and_orbs)
 sc.savetxt('test2.out', test.weights)
 
-e = Evaluator(1.0, test)
+e = Evaluator(0.7, test)
 
 orbs_from_hfj_res = hinout.make_orbitals_parser(fmt=['no', 'nl', 'j', 'occ',
                                                      'kp', 'en', 'd', 'delt',
@@ -53,20 +60,23 @@ fil = open('HFJ.RES', 'r')
 
 orbs = orbs_from_hfj_res(fil)[0]
 print orbs
-inds = [i for i, o in enumerate(orbs) if 'P' in o['nl'] and o['j'] == '1/2']
+inds = [i for i, o in enumerate(orbs) if 'S' in o['nl'] and o['j'] == '1/2']
+fracs = [orbs[i]['occ'] for i in inds]
+b_inds = [inds[1], inds[2]]
 
-b_inds = inds[1:]
-
+print inds, b_inds
+coefs = []
 ci = 0
-smat = sc.zeros((2,2))
-for i in b_inds:
-    tmp = []
-    cj = 0
-    for j in b_inds:
-        smat[ci, cj]= e.orb_dot(r_and_orbs[:,i],r_and_orbs[:,j])
-        cj +=1
-    ci += 1
-print smat
-print inv(smat)
-print sc.dot(inv(smat), smat)
-print e.get_dm_block(inds, b_inds, [orbs[i]['occ'] for i in inds])
+for i in inds:
+    orb = test.getorb_by_number(i)[0]
+    coefs += [sc.array([e.orb_dot(orb, test.getorb_by_number(j)[0])
+                        for j in b_inds])]
+
+print coefs
+res =  e.get_dm_block(inds, b_inds, [orbs[i]['occ'] for i in inds])
+print res
+print inv(res)
+print orbs[0]['occ']
+mt = sc.array([[3.617, 8.340], [8.340, 19.393]])
+print sc.dot(inv(mt), res)
+
