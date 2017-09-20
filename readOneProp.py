@@ -1,5 +1,5 @@
 import scipy as sc
-
+import sys
 
 def read_oneProp_DM(filename):
     """Reads oneProp density matrix in lj presentation as scipy array.
@@ -108,11 +108,27 @@ def test():
         print mask
         print dm[mask][:, mask]  # black magic here
     # diagonal matrices tests ( two basis function per l value)
-    dm2 = read_oneProp_DM('./tests/dm2func')
+    dm2 = read_oneProp_DM('JRed_DM_Re')
     for ljm, mask in diagonal_masks(36, [2, 2, 2, 2]).iteritems():
         print "-"*20
         print ljm
         print "-"*20
         print dm2[mask][:, mask]  # black magic here
+
+def get_dm_blocks(filename, N, nnum):
+    dm2 = read_oneProp_DM(filename)
+    res = {}
+    for ljm, mask in diagonal_masks(N, nnum).iteritems():
+        l, j, m = ljm
+        l = "spdfgh"[l]
+        j = int(j*2)
+        tmp =dm2[mask][:, mask]
+        if (l, j) not in res.keys():
+            res[l,j] = tmp*1e0
+        else:
+            res[l,j] += tmp
+    return res
 if __name__ == '__main__':
-    test()
+    #test()
+    l, j, N, nnum = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), map(int, sys.argv[4:])
+    print get_dm_blocks('JRed_Dm_Re', N, nnum)[(l, j)]
